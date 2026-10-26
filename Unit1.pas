@@ -32,33 +32,50 @@ implementation
 procedure TForm1.InitializeDatabase;
 var
   Settings: TIniFile;
-  UserName, Password: string;
+  UserName, Password, DatabaseFile, Stage: string;
+  Port: Integer;
   Query: TIBQuery;
 begin
-  IBDatabase1.DatabaseName := ExtractFilePath(Application.ExeName) + 'sample.gdb';
+  DatabaseFile := ExtractFilePath(Application.ExeName) + 'sample.gdb';
   Settings := TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
   try
+    Port := Settings.ReadInteger('InterBase', 'Port', 3050);
     UserName := Settings.ReadString('InterBase', 'UserName', 'SYSDBA');
     Password := Settings.ReadString('InterBase', 'Password', 'masterkey');
   finally
     Settings.Free;
   end;
 
-  if not FileExists(IBDatabase1.DatabaseName) then
-  begin
-    { CreateDatabase uses SQL clauses, whereas Open uses name=value pairs. }
-    IBDatabase1.Params.Clear;
-    IBDatabase1.Params.Add('USER ' + QuotedStr(UserName));
-    IBDatabase1.Params.Add('PASSWORD ' + QuotedStr(Password));
-    IBDatabase1.Params.Add('PAGE_SIZE 4096');
-    IBDatabase1.CreateDatabase;
-    IBDatabase1.Close;
-  end;
+  if (Port < 1) or (Port > 65535) then
+    raise EDatabaseError.Create('InterBase Port must be between 1 and 65535.');
+  { Explicit loopback TCP/IP avoids dependence on local IPC configuration. }
+  IBDatabase1.DatabaseName := 'localhost/' + IntToStr(Port) + ':' + DatabaseFile;
 
-  IBDatabase1.Params.Clear;
-  IBDatabase1.Params.Values['user_name'] := UserName;
-  IBDatabase1.Params.Values['password'] := Password;
-  IBDatabase1.Open;
+  Stage := 'create';
+  try
+    if not FileExists(DatabaseFile) then
+    begin
+      { CreateDatabase uses SQL clauses, whereas Open uses name=value pairs. }
+      IBDatabase1.Params.Clear;
+      IBDatabase1.Params.Add('USER ' + QuotedStr(UserName));
+      IBDatabase1.Params.Add('PASSWORD ' + QuotedStr(Password));
+      IBDatabase1.Params.Add('PAGE_SIZE 4096');
+      IBDatabase1.CreateDatabase;
+      IBDatabase1.Close;
+    end;
+
+    Stage := 'open';
+    IBDatabase1.Params.Clear;
+    IBDatabase1.Params.Values['user_name'] := UserName;
+    IBDatabase1.Params.Values['password'] := Password;
+    IBDatabase1.Open;
+  except
+    on E: Exception do
+      raise EDatabaseError.CreateFmt(
+        'Cannot %s InterBase database "%s". ' +
+        'Check the InterBase service, TCP port and client installation. %s',
+        [Stage, IBDatabase1.DatabaseName, E.Message]);
+  end;
 
   Query := TIBQuery.Create(nil);
   try
