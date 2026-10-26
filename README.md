@@ -12,19 +12,18 @@ TIBTransaction and TIBTable. BDE is no longer required.
   have permission to create and access `sample.gdb` in that directory.
 
 The database path is `sample.gdb` beside the executable. This sample uses
-loopback TCP/IP (localhost/3050); it does not configure a remote server connection.
+local InterBase access; it does not configure a remote server connection.
 The database contains a table named `SAMPLE` (not a table file name).
 
 Optional: place `Project1.ini` beside `Project1.exe` to set credentials:
 
 ```ini
 [InterBase]
-Port=3050
 UserName=SYSDBA
 Password=masterkey
 ```
 
-Port selects the local InterBase TCP listener (default 3050). The defaults above are the classic sample credentials. Set the password to
+The defaults above are the classic sample credentials. Set the password to
 match your local InterBase installation. If the executable is renamed, use
 an INI file with the same base name. No credentials are stored in the DFM.
 
@@ -62,12 +61,3 @@ Runtime checks on a machine with InterBase installed:
 4. With an empty SAMPLE table, restart: confirm three sample rows are added.
 5. With invalid credentials, confirm an error is reported without overwriting
    an existing database.
-
-If startup reports "unavailable database", check that the local InterBase
-service is running and that Port matches its TCP listener. The application
-uses `localhost/<Port>:<absolute path>` for both creation and connection;
-file existence is checked using only the local path. Connection errors
-include the target and whether database creation or opening failed.
-The 32-bit executable requires a compatible 32-bit gds32.dll. A copy beside
-the executable can override the installed system client, so check its version
-if the same connection succeeds in another tool but fails in this application.
