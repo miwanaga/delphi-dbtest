@@ -1,21 +1,34 @@
-# Delphi 7 InterBase sample
+# Delphi 7 / BDE / InterBase 6 sample
 
-This branch uses Delphi 7's InterBase Express (IBX): TIBDatabase,
-TIBTransaction and TIBTable. BDE is no longer required.
+The data access layer stays BDE: TDatabase + TTable + TDataSource + DBGrid.
+IBX and FireDAC are not used. Only the storage changes from dBase to InterBase.
 
-## Requirements and connection
+## Requirements
 
-- Delphi 7 with IBX to build `Project1.dpr`.
-- A running local InterBase server and the matching 32-bit InterBase client
-  (`gds32.dll`) to run the executable.
-- A writable executable directory. The InterBase service account must also
-  have permission to create and access `sample.gdb` in that directory.
+- Delphi 7 with BDE and the InterBase SQL Links driver (`INTRBASE`).
+- A working local InterBase 6 engine and its compatible 32-bit `gds32.dll`.
+- A writable executable directory, also accessible by the InterBase engine.
 
-The database path is `sample.gdb` beside the executable. This sample uses
-local InterBase access; it does not configure a remote server connection.
-The database contains a table named `SAMPLE` (not a table file name).
+InterBase 6 requires an engine even when the GDB is on the local disk. The
+application specifies only a local file path; no host or TCP/IP port is used.
+This is not an embedded/serverless database, and does not require ToGo.
 
-Optional: place `Project1.ini` beside `Project1.exe` to set credentials:
+## Connection properties
+
+| Component/property | Value |
+| --- | --- |
+| Database1.DriverName | INTRBASE |
+| Database1.DatabaseName | SampleInterBase (application-local BDE connection name) |
+| Database1.Params['SERVER NAME'] | Absolute path to sample.gdb beside the EXE |
+| Table1.DatabaseName | SampleInterBase |
+| Table1.TableName | SAMPLE (table inside the GDB) |
+
+There is no persistent BDE alias to register. Connection identity and fixed
+driver options are set in the DFM; the file path and credentials are set at
+runtime. Unlike dBase, TableName does not name a file and TableType stays at
+its default. SQL dialect 1 is used for InterBase 6 / BDE compatibility.
+
+Place `Project1.ini` beside `Project1.exe` to override the sample credentials:
 
 ```ini
 [InterBase]
@@ -23,16 +36,19 @@ UserName=SYSDBA
 Password=masterkey
 ```
 
-The defaults above are the classic sample credentials. Set the password to
-match your local InterBase installation. If the executable is renamed, use
-an INI file with the same base name. No credentials are stored in the DFM.
+If the executable is renamed, use an INI file with the same base name.
+The default password must match your InterBase installation.
 
 ## Initialization and editing
 
-On form creation, the application creates the database if absent, creates
-`SAMPLE` if absent, then inserts three sample rows only if the table is empty.
-DDL is committed before inserts; all three seed inserts share one transaction
-and roll back together on failure. Existing rows are preserved on restart.
+On form creation, an absent sample.gdb is created with the InterBase 6
+`isc_create_database` client API. This small bootstrap is needed before BDE
+can open the database; it is not IBX. All subsequent connections, metadata
+queries, table creation, inserts and grid operations use BDE/SQL Links.
+
+A TQuery creates SAMPLE if absent. DDL is committed before preparing inserts.
+If SAMPLE is empty, three rows are inserted in one transaction, with rollback
+on failure. Existing rows are preserved on restart.
 
 | Column | SQL type |
 | --- | --- |
@@ -40,24 +56,18 @@ and roll back together on failure. Existing rows are preserved on restart.
 | NAME | VARCHAR(50) |
 | ADDRESS | VARCHAR(100) |
 
-DBGrid uses TDataSource and TIBTable. Posted edits and deletes are committed
-with CommitRetaining. Closing the form posts a pending grid edit; the final
-read transaction is rolled back when the form is destroyed.
+TTable displays and edits SAMPLE. Posted grid changes use BDE autocommit;
+closing the form posts a pending edit. Existing sample.dbf is not imported
+or modified. Existing GDB files must be compatible with InterBase 6 and the
+BDE SQL dialect setting; a GDB created by a newer engine may not open in IB6.
 
-This replaces DBF storage; existing `sample.dbf` files are not imported or
-modified. Text uses the database's default NONE character set and the Delphi
-7 ANSI client; the seed data is ASCII.
+## Verification
 
-## Build and runtime checks
+Build using delphi-build-server: compiler `delphi-7.0`, project `Project1.dpr`,
+platform `Win32`, empty configuration, mode `build`.
 
-Use delphi-build-server with compiler `delphi-7.0`, project `Project1.dpr`,
-platform `Win32`, empty configuration, and mode `build`.
-
-Runtime checks on a machine with InterBase installed:
-
-1. Start with no `sample.gdb`: confirm SAMPLE and three rows appear.
-2. Close and restart: confirm the same three rows remain.
-3. Edit a row, move to another row, close and restart: confirm persistence.
-4. With an empty SAMPLE table, restart: confirm three sample rows are added.
-5. With invalid credentials, confirm an error is reported without overwriting
-   an existing database.
+On the Delphi 7 / InterBase 6 machine, test first start without a sample.gdb,
+restart without duplicated rows, and persistence of a posted grid edit.
+If startup reports unavailable database, check the local InterBase engine and
+the version of gds32.dll loaded by the executable. Switching IBX to BDE does
+not remove the engine requirement.

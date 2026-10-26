@@ -29,30 +29,22 @@ object Form1: TForm1
     TitleFont.Name = #65325#65331' '#65328#12468#12471#12483#12463
     TitleFont.Style = []
   end
-  object Table1: TIBTable
-    Database = IBDatabase1
-    Transaction = IBTransaction1
+  object Table1: TTable
+    DatabaseName = 'SampleInterBase'
     TableName = 'SAMPLE'
-    AfterPost = Table1AfterPost
-    AfterDelete = Table1AfterPost
     Left = 704
     Top = 168
   end
-  object IBDatabase1: TIBDatabase
+  object Database1: TDatabase
+    DatabaseName = 'SampleInterBase'
+    DriverName = 'INTRBASE'
     LoginPrompt = False
-    DefaultTransaction = IBTransaction1
-    SQLDialect = 3
-    Left = 800
-    Top = 168
-  end
-  object IBTransaction1: TIBTransaction
-    DefaultDatabase = IBDatabase1
-    DefaultAction = TARollback
     Params.Strings = (
-      'read_committed'
-      'rec_version'
-      'nowait')
-    Left = 896
+      'SQLPASSTHRU MODE=SHARED AUTOCOMMIT'
+      'SQLQRYMODE=SERVER'
+      'SQLDIALECT=1')
+    TransIsolation = tiReadCommitted
+    Left = 800
     Top = 168
   end
   object DataSource1: TDataSource

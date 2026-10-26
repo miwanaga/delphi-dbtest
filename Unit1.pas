@@ -4,19 +4,17 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Grids, DBGrids, DB, IBDatabase, IBTable, IBQuery, IniFiles;
+  Dialogs, Grids, DBGrids, DB, DBTables, IniFiles;
 
 type
   TForm1 = class(TForm)
-    Table1: TIBTable;
+    Table1: TTable;
     DataSource1: TDataSource;
     DBGrid1: TDBGrid;
-    IBDatabase1: TIBDatabase;
-    IBTransaction1: TIBTransaction;
+    Database1: TDatabase;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure Table1AfterPost(DataSet: TDataSet);
   private
     procedure InitializeDatabase;
   public
@@ -29,13 +27,86 @@ implementation
 
 {$R *.dfm}
 
+type
+  TISCStatus = array[0..19] of Longint;
+  TCreateDatabase = function(Status: PLongint; NameLength: Smallint;
+    Name: PChar; var Handle: Pointer; ParamsLength: Smallint;
+    Params: PChar; DatabaseType: Smallint): Longint; stdcall;
+  TDetachDatabase = function(Status: PLongint;
+    var Handle: Pointer): Longint; stdcall;
+  TInterpretStatus = function(Buffer: PChar;
+    var Status: PLongint): Longint; stdcall;
+
+{ BDE opens existing SQL databases. Use only the InterBase 6 client API to
+  create an absent GDB; all table access below goes through BDE/SQL Links. }
+procedure CreateInterBaseDatabase(const FileName, UserName, Password: string);
+var
+  Client: HMODULE;
+  CreateDatabase: TCreateDatabase;
+  DetachDatabase: TDetachDatabase;
+  InterpretStatus: TInterpretStatus;
+  Handle: Pointer;
+  Status: TISCStatus;
+  StatusPtr: PLongint;
+  Buffer: array[0..511] of Char;
+  Params, ErrorText: string;
+
+  procedure CheckStatus(ResultCode: Longint);
+  begin
+    if ResultCode = 0 then
+      Exit;
+    ErrorText := '';
+    StatusPtr := @Status[0];
+    while InterpretStatus(@Buffer[0], StatusPtr) <> 0 do
+    begin
+      if ErrorText <> '' then
+        ErrorText := ErrorText + #13#10;
+      ErrorText := ErrorText + StrPas(@Buffer[0]);
+    end;
+    raise EDatabaseError.CreateFmt('Cannot create InterBase database "%s". %s',
+      [FileName, ErrorText]);
+  end;
+
+begin
+  if (Length(UserName) > 255) or (Length(Password) > 255) then
+    raise EDatabaseError.Create('InterBase credentials must not exceed 255 bytes.');
+  Client := LoadLibrary('gds32.dll');
+  if Client = 0 then
+    raise EDatabaseError.Create('Cannot load the 32-bit InterBase client gds32.dll.');
+  try
+    @CreateDatabase := GetProcAddress(Client, 'isc_create_database');
+    @DetachDatabase := GetProcAddress(Client, 'isc_detach_database');
+    @InterpretStatus := GetProcAddress(Client, 'isc_interprete');
+    if not Assigned(CreateDatabase) or not Assigned(DetachDatabase) or
+      not Assigned(InterpretStatus) then
+      raise EDatabaseError.Create('Required InterBase 6 client API is unavailable.');
+
+    { DPB version 1, user name, password, database SQL dialect 1.
+      Dialect 1 is compatible with InterBase 6 and the BDE INTRBASE driver. }
+    Params := #1#28 + Chr(Length(UserName)) + UserName +
+      #29 + Chr(Length(Password)) + Password + #63#4#1#0#0#0;
+    Handle := nil;
+    FillChar(Status, SizeOf(Status), 0);
+    try
+      CheckStatus(CreateDatabase(@Status[0], Length(FileName), PChar(FileName),
+        Handle, Length(Params), PChar(Params), 0));
+      CheckStatus(DetachDatabase(@Status[0], Handle));
+    finally
+      if Handle <> nil then
+        DetachDatabase(@Status[0], Handle);
+    end;
+  finally
+    FreeLibrary(Client);
+  end;
+end;
+
 procedure TForm1.InitializeDatabase;
 var
   Settings: TIniFile;
-  UserName, Password: string;
-  Query: TIBQuery;
+  DatabaseFile, UserName, Password: string;
+  Query: TQuery;
 begin
-  IBDatabase1.DatabaseName := ExtractFilePath(Application.ExeName) + 'sample.gdb';
+  DatabaseFile := ExtractFilePath(Application.ExeName) + 'sample.gdb';
   Settings := TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
   try
     UserName := Settings.ReadString('InterBase', 'UserName', 'SYSDBA');
@@ -44,27 +115,19 @@ begin
     Settings.Free;
   end;
 
-  if not FileExists(IBDatabase1.DatabaseName) then
-  begin
-    { CreateDatabase uses SQL clauses, whereas Open uses name=value pairs. }
-    IBDatabase1.Params.Clear;
-    IBDatabase1.Params.Add('USER ' + QuotedStr(UserName));
-    IBDatabase1.Params.Add('PASSWORD ' + QuotedStr(Password));
-    IBDatabase1.Params.Add('PAGE_SIZE 4096');
-    IBDatabase1.CreateDatabase;
-    IBDatabase1.Close;
-  end;
+  if not FileExists(DatabaseFile) then
+    CreateInterBaseDatabase(DatabaseFile, UserName, Password);
 
-  IBDatabase1.Params.Clear;
-  IBDatabase1.Params.Values['user_name'] := UserName;
-  IBDatabase1.Params.Values['password'] := Password;
-  IBDatabase1.Open;
+  { DatabaseName is the BDE connection name, SERVER NAME is the GDB path. }
+  Database1.Params.Values['SERVER NAME'] := DatabaseFile;
+  Database1.Params.Values['USER NAME'] := UserName;
+  Database1.Params.Values['PASSWORD'] := Password;
+  Database1.Open;
 
-  Query := TIBQuery.Create(nil);
+  Query := TQuery.Create(nil);
   try
-    Query.Database := IBDatabase1;
-    Query.Transaction := IBTransaction1;
-    IBTransaction1.StartTransaction;
+    Query.DatabaseName := Database1.DatabaseName;
+    Database1.StartTransaction;
     try
       Query.SQL.Text := 'SELECT RDB$RELATION_NAME FROM RDB$RELATIONS ' +
         'WHERE RDB$RELATION_NAME = ''SAMPLE''';
@@ -78,10 +141,9 @@ begin
       end
       else
         Query.Close;
-      { Commit DDL before preparing statements against the new table. }
-      IBTransaction1.Commit;
+      Database1.Commit;
 
-      IBTransaction1.StartTransaction;
+      Database1.StartTransaction;
       Query.SQL.Text := 'SELECT ID FROM SAMPLE';
       Query.Open;
       if Query.IsEmpty then
@@ -104,10 +166,10 @@ begin
       end
       else
         Query.Close;
-      IBTransaction1.Commit;
+      Database1.Commit;
     except
-      if IBTransaction1.InTransaction then
-        IBTransaction1.Rollback;
+      if Database1.InTransaction then
+        Database1.Rollback;
       raise;
     end;
   finally
@@ -118,14 +180,7 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   InitializeDatabase;
-  IBTransaction1.StartTransaction;
   Table1.Open;
-end;
-
-procedure TForm1.Table1AfterPost(DataSet: TDataSet);
-begin
-  { Preserve posted grid edits while keeping the display transaction open. }
-  IBTransaction1.CommitRetaining;
 end;
 
 procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -137,9 +192,9 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
   Table1.Close;
-  if IBTransaction1.InTransaction then
-    IBTransaction1.Rollback;
-  IBDatabase1.Close;
+  if Database1.InTransaction then
+    Database1.Rollback;
+  Database1.Close;
 end;
 
 end.
