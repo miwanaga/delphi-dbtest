@@ -11,6 +11,9 @@ type
     Table1: TTable;
     DataSource1: TDataSource;
     DBGrid1: TDBGrid;
+    Table1ID: TStringField;
+    Table1NAME: TStringField;
+    Table1ADDRESS: TStringField;
     procedure FormCreate(Sender: TObject);
   private
   public
