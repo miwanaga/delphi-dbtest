@@ -14,6 +14,17 @@ type
     Table1ID: TStringField;
     Table1NAME: TStringField;
     Table1ADDRESS: TStringField;
+    Table1NUM_VAL: TFloatField;
+    Table1FLOAT_VAL: TFloatField;
+    Table1DOUBLE_VAL: TFloatField;
+    Table1BOOL_VAL: TBooleanField;
+    Table1DATE_VAL: TDateField;
+    Table1STAMP_VAL: TDateTimeField;
+    Table1LONG_VAL: TIntegerField;
+    Table1AUTO_VAL: TAutoIncField;
+    Table1MEMO_VAL: TMemoField;
+    Table1BIN_VAL: TBlobField;
+    Table1OLE_VAL: TBlobField;
     procedure FormCreate(Sender: TObject);
   private
   public
@@ -24,6 +35,8 @@ var
 
 implementation
 
+uses DbfSamples;
+
 {$R *.dfm}
 
 procedure TForm1.FormCreate(Sender: TObject);
@@ -33,24 +46,12 @@ begin
   Table1.TableName := 'sample.dbf';
   Table1.TableType := ttDBase;
 
-  if not Table1.Exists then
-  begin
-    Table1.FieldDefs.Clear;
-    Table1.FieldDefs.Add('ID', ftString, 10);
-    Table1.FieldDefs.Add('NAME', ftString, 50);
-    Table1.FieldDefs.Add('ADDRESS', ftString, 100);
-    Table1.CreateTable;
-  end;
+  PrepareSampleTable(Table1);
 
   Table1.Open;
   Table1.DisableControls;
   try
-    if Table1.IsEmpty then
-    begin
-      Table1.AppendRecord(['001', 'Taro Yamada', 'Tokyo']);
-      Table1.AppendRecord(['002', 'Hanako Suzuki', 'Osaka']);
-      Table1.AppendRecord(['003', 'Ichiro Sato', 'Nagoya']);
-    end;
+    AddSampleRows(Table1);
     Table1.First;
   finally
     Table1.EnableControls;
