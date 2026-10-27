@@ -4,7 +4,7 @@ program DbfSampleCheck;
 
 uses
   Windows, SysUtils, Classes, DB, DBTables,
-  DbfSamples in '..\DbfSamples.pas';
+  DbfSamples in 'DbfSamples.pas';
 
 procedure Require(Condition: Boolean; const MessageText: string);
 begin

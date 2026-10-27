@@ -59,7 +59,7 @@ sample rows when it is nonempty.
 Use delphi-build-server, compiler delphi-7.0, platform Win32, empty
 configuration and mode build for Project1.dpr.
 
-tests/DbfSampleCheck.dpr is a Delphi 7 console runtime check. It builds
+DbfSampleCheck.dpr is a Delphi 7 console runtime check. It builds
 against DbfSamples.pas and requires BDE at runtime. It verifies all native
 field codes, scalar and blob values, restart without duplicate rows, and
 upgrade of a three-column table with the original data preserved in a backup.
