@@ -117,7 +117,7 @@ begin
     for I := Low(ExpectedTypes) to High(ExpectedTypes) do
     begin
       Stream.ReadBuffer(Field, SizeOf(Field));
-      if (StrPas(PChar(@Field[0])) <> StrPas(Fields[I].szName)) or
+      if (StrPas(PAnsiChar(@Field[0])) <> StrPas(Fields[I].szName)) or
         (Char(Field[32]) <> ExpectedTypes[I]) then
         raise EDatabaseError.CreateFmt('Unexpected DBF definition for %s.',
           [StrPas(Fields[I].szName)]);
