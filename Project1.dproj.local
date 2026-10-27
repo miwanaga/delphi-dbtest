@@ -1,2 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject/>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2026/10/27 11:34:08.618,=C:\Users\Masayuki Iwanaga\Documents\Embarcadero\Studio\Projects\DBTest\InterBaseSamples.pas</Transaction>
+    <Transaction>2026/10/27 11:35:08.165,C:\Users\Masayuki Iwanaga\Documents\Embarcadero\Studio\Projects\DBTest\DbfSamples.pas=</Transaction>
+  </Transactions>
+</BorlandProject>

@@ -1,0 +1,22 @@
+# Delphi build and IDE state
+*.dcu
+*.exe
+*.map
+*.rsm
+*.drc
+*.ddp
+*.~*
+__history/
+__recovery/
+Win32/
+Win64/
+
+# Local verification and InterBase redistributables/data
+.verification/
+ibtogo*.dll
+ib_util*.dll
+ibxml*.dll
+interbase/
+*.ib
+*.dbf
+*.DBT

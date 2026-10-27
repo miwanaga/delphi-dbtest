@@ -3,7 +3,7 @@ program Project1;
 uses
   Forms,
   Unit1 in 'Unit1.pas' {Form1},
-  DbfSamples in 'DbfSamples.pas';
+  InterBaseSamples in 'InterBaseSamples.pas';
 
 {$R *.res}
 

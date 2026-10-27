@@ -3,34 +3,23 @@ unit Unit1;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Grids, DBGrids, DB, DBTables;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.Grids, Vcl.DBGrids, Data.DB, FireDAC.Comp.Client,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.DataSet,
+  FireDAC.UI.Intf, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
+  FireDAC.Phys, FireDAC.VCLUI.Wait;
 
 type
   TForm1 = class(TForm)
-    Table1: TTable;
+    Connection1: TFDConnection;
+    Table1: TFDTable;
     DataSource1: TDataSource;
     DBGrid1: TDBGrid;
-    Table1ID: TStringField;
-    Table1NAME: TStringField;
-    Table1ADDRESS: TStringField;
-    Table1NUM_VAL: TFloatField;
-    Table1FLOAT_VAL: TFloatField;
-    Table1DOUBLE_VAL: TFloatField;
-    Table1BOOL_VAL: TBooleanField;
-    Table1DATE_VAL: TDateField;
-    Table1STAMP_VAL: TDateTimeField;
-    Table1LONG_VAL: TIntegerField;
-    Table1AUTO_VAL: TAutoIncField;
-    Table1MEMO_VAL: TMemoField;
-    Table1BIN_VAL: TBlobField;
-    Table1OLE_VAL: TBlobField;
-    Table1MEMO_TEXT: TStringField;
-    Table1BIN_HEX: TStringField;
     procedure FormCreate(Sender: TObject);
     procedure Table1CalcFields(DataSet: TDataSet);
-  private
-  public
   end;
 
 var
@@ -38,7 +27,7 @@ var
 
 implementation
 
-uses DbfSamples;
+uses System.IOUtils, InterBaseSamples;
 
 {$R *.dfm}
 
@@ -51,21 +40,21 @@ var
   Bytes: array[0..MaxBinaryBytes - 1] of Byte;
   Count, I: Integer;
 begin
-  Table1MEMO_TEXT.Clear;
-  Table1BIN_HEX.Clear;
-  if not Table1MEMO_VAL.IsNull then
+  DataSet.FieldByName('MEMO_TEXT').Clear;
+  DataSet.FieldByName('BIN_HEX').Clear;
+  if not DataSet.FieldByName('MEMO_VAL').IsNull then
   begin
-    MemoText := Table1MEMO_VAL.AsString;
+    MemoText := DataSet.FieldByName('MEMO_VAL').AsWideString;
     MemoText := StringReplace(MemoText, #13#10, ' / ', [rfReplaceAll]);
     MemoText := StringReplace(MemoText, #13, ' / ', [rfReplaceAll]);
     MemoText := StringReplace(MemoText, #10, ' / ', [rfReplaceAll]);
-    if Length(MemoText) > Table1MEMO_TEXT.Size then
-      MemoText := Copy(MemoText, 1, Table1MEMO_TEXT.Size - 3) + '...';
-    Table1MEMO_TEXT.AsString := MemoText;
+    if Length(MemoText) > 255 then
+      MemoText := Copy(MemoText, 1, 252) + '...';
+    DataSet.FieldByName('MEMO_TEXT').AsWideString := MemoText;
   end;
-  if not Table1BIN_VAL.IsNull then
+  if not DataSet.FieldByName('BIN_VAL').IsNull then
   begin
-    Stream := DataSet.CreateBlobStream(Table1BIN_VAL, bmRead);
+    Stream := DataSet.CreateBlobStream(DataSet.FieldByName('BIN_VAL'), bmRead);
     try
       Count := Stream.Read(Bytes, SizeOf(Bytes));
       HexText := '';
@@ -77,29 +66,27 @@ begin
       end;
       if Stream.Size > Count then
         HexText := HexText + ' ...';
-      Table1BIN_HEX.AsString := HexText;
+      DataSet.FieldByName('BIN_HEX').AsString := HexText;
     finally
       Stream.Free;
     end;
   end;
 end;
+
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  DataDirectory, DatabaseFile: string;
 begin
-  Table1.Close;
-  Table1.DatabaseName := ExtractFilePath(Application.ExeName);
-  Table1.TableName := 'sample.dbf';
-  Table1.TableType := ttDBase;
-
-  PrepareSampleTable(Table1);
-
-  Table1.Open;
-  Table1.DisableControls;
-  try
-    AddSampleRows(Table1);
-    Table1.First;
-  finally
-    Table1.EnableControls;
-  end;
+  DataDirectory := TPath.Combine(
+    GetEnvironmentVariable('LOCALAPPDATA'), 'DBTest');
+  if ParamCount > 0 then
+    DatabaseFile := ExpandFileName(ParamStr(1))
+  else
+    DatabaseFile := TPath.Combine(DataDirectory, 'sample.ib');
+  ConfigureSampleConnection(Connection1, DatabaseFile);
+  PrepareSampleDatabase(Connection1);
+  OpenSampleTable(Table1);
+  Caption := 'FireDAC + InterBase Lite - ' + DatabaseFile;
 end;
 
 end.
