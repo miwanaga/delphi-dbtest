@@ -30,6 +30,7 @@ object Form1: TForm1
   object Table1: TTable
     TableName = 'sample.dbf'
     TableType = ttDBase
+    OnCalcFields = Table1CalcFields
     Left = 704
     Top = 168
     object Table1ID: TStringField
@@ -79,6 +80,22 @@ object Form1: TForm1
     object Table1OLE_VAL: TBlobField
       FieldName = 'OLE_VAL'
       BlobType = ftDBaseOle
+    end
+    object Table1MEMO_TEXT: TStringField
+      FieldKind = fkCalculated
+      FieldName = 'MEMO_TEXT'
+      ReadOnly = True
+      Size = 255
+      DisplayWidth = 60
+      Calculated = True
+    end
+    object Table1BIN_HEX: TStringField
+      FieldKind = fkCalculated
+      FieldName = 'BIN_HEX'
+      ReadOnly = True
+      Size = 255
+      DisplayWidth = 70
+      Calculated = True
     end
   end
   object DataSource1: TDataSource
