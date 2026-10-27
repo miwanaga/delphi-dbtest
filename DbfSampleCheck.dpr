@@ -55,6 +55,29 @@ begin
   end;
 end;
 
+procedure CheckSharedStartup(const Directory: string);
+var
+  First, Second: TTable;
+begin
+  First := TTable.Create(nil);
+  Second := TTable.Create(nil);
+  try
+    First.DatabaseName := Directory;
+    First.TableName := 'sample.dbf';
+    First.Open;
+    Second.DatabaseName := Directory;
+    Second.TableName := 'sample.dbf';
+    PrepareSampleTable(Second);
+    Second.Open;
+    AddSampleRows(Second);
+    Require(Second.FieldCount = 14, 'Shared startup lost fields.');
+    Require(Second.RecordCount = 3, 'Shared startup changed rows.');
+    Require(First.Active, 'Shared startup closed the first reader.');
+  finally
+    Second.Free;
+    First.Free;
+  end;
+end;
 procedure CheckLegacyUpgrade(const Directory: string);
 var
   Table: TTable;
@@ -117,8 +140,9 @@ begin
     ForceDirectories(Legacy);
     Writeln('Test files: ', Root);
     CheckFreshTable(Fresh);
+    CheckSharedStartup(Fresh);
     CheckLegacyUpgrade(Legacy);
-    Writeln('PASS: native field codes, values, restart and legacy backup upgrade.');
+    Writeln('PASS: native fields, values, restart, shared startup and legacy backup upgrade.');
   except
     on E: Exception do
     begin

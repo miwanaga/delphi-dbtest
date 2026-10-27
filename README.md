@@ -54,8 +54,11 @@ rows are not copied into the active all-types table. No existing table is
 deleted. An unrecognized schema is rejected without changing it. Close other
 applications using sample.dbf before upgrading.
 
-The next startup keeps an existing all-types table and does not add more
-sample rows when it is nonempty.
+The next startup checks an existing all-types table with shared access and
+does not request an exclusive lock. It does not add more sample rows when
+the table is nonempty. Only upgrading an old three-column table requires
+exclusive access. Another application that opens the table exclusively can
+still prevent this sample from reading it.
 
 ## Verification
 

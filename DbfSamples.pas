@@ -138,8 +138,22 @@ begin
   try
     Source.DatabaseName := Directory;
     Source.TableName := 'sample.dbf';
-    Source.Exclusive := True;
+    { Normal startup only inspects the schema with shared access. }
     Source.Open;
+    if Source.FieldDefs.Count = 14 then
+      Exit;
+    Source.Close;
+    { Only a legacy schema upgrade needs exclusive access for the rename. }
+    Source.Exclusive := True;
+    try
+      Source.Open;
+    except
+      on E: EDBEngineError do
+        raise EDatabaseError.CreateFmt(
+          'Cannot upgrade sample.dbf. Close other applications or IDE datasets ' +
+          'using this table, then retry. BDE: %s', [E.Message]);
+    end;
+    { Another process may have completed an upgrade since the shared check. }
     if Source.FieldDefs.Count = 14 then
       Exit;
     if (Source.FieldDefs.Count <> 3) or
