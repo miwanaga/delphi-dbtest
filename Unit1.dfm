@@ -10,6 +10,7 @@ object Form1: TForm1
   Font.Height = -12
   Font.Name = #65325#65331' '#65328#12468#12471#12483#12463
   Font.Style = []
+  OnCreate = FormCreate
   TextHeight = 12
   object DBGrid1: TDBGrid
     Left = 96
@@ -26,8 +27,21 @@ object Form1: TForm1
   end
   object Table1: TTable
     DatabaseName = 'sample'
+    TableName = 'sample.dbf'
     Left = 704
     Top = 168
+    object Table1ID: TStringField
+      FieldName = 'ID'
+      Size = 10
+    end
+    object Table1NAME: TStringField
+      FieldName = 'NAME'
+      Size = 50
+    end
+    object Table1ADDRESS: TStringField
+      FieldName = 'ADDRESS'
+      Size = 100
+    end
   end
   object DataSource1: TDataSource
     DataSet = Table1
