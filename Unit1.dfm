@@ -1,17 +1,15 @@
 object Form1: TForm1
   Left = 192
   Top = 125
-  Width = 1503
-  Height = 802
   Caption = 'Form1'
+  ClientHeight = 763
+  ClientWidth = 1487
   Color = clBtnFace
   Font.Charset = SHIFTJIS_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
   Font.Name = #65325#65331' '#65328#12468#12471#12483#12463
   Font.Style = []
-  OldCreateOrder = False
-  PixelsPerInch = 96
   TextHeight = 12
   object DBGrid1: TDBGrid
     Left = 96
@@ -27,7 +25,7 @@ object Form1: TForm1
     TitleFont.Style = []
   end
   object Table1: TTable
-    DatabaseName = 'sample.dbf'
+    DatabaseName = 'sample'
     Left = 704
     Top = 168
   end
